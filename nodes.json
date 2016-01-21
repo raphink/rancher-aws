@@ -23,26 +23,6 @@
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
-    "CPUAlarmHighEvalPeriods": {
-      "Type": "String",
-      "Default": "1"
-    },
-    "CPUAlarmHighThreshold": {
-      "Type": "String",
-      "Default": "80"
-    },
-    "CPUAlarmLowThreshold": {
-      "Type": "String",
-      "Default": "60"
-    },
-    "CPUAlarmLowEvalPeriods": {
-      "Type": "String",
-      "Default": "5"
-    },
-    "AlarmPeriod": {
-      "Type": "String",
-      "Default": "60"
-    },
     "RancherServerURL": {
       "Type": "String"
     },
@@ -54,13 +34,6 @@
   "Resources": {
     "ComponentAutoScalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "UpdatePolicy": {
-        "AutoScalingRollingUpdate": {
-          "MinInstancesInService": 1,
-          "MaxBatchSize": 1,
-          "PauseTime": "PT0S"
-        }
-      },
       "Properties": {
         "Tags": [
           {
@@ -139,92 +112,6 @@
             ]
           }
         }
-      }
-    },
-    "ComponentScaleUpPolicy": {
-      "Type": "AWS::AutoScaling::ScalingPolicy",
-      "Properties": {
-        "AutoScalingGroupName": {
-          "Ref": "ComponentAutoScalingGroup"
-        },
-        "AdjustmentType": "ChangeInCapacity",
-        "Cooldown": 240,
-        "ScalingAdjustment": 1
-      }
-    },
-    "ComponentScaleDownPolicy": {
-      "Type": "AWS::AutoScaling::ScalingPolicy",
-      "Properties": {
-        "AutoScalingGroupName": {
-          "Ref": "ComponentAutoScalingGroup"
-        },
-        "AdjustmentType": "ChangeInCapacity",
-        "Cooldown": 60,
-        "ScalingAdjustment": -1
-      }
-    },
-    "CPUAlarmHigh": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "AlarmDescription": "Scale-up if CPU > 80% for 1 minutes",
-        "Threshold": {
-          "Ref": "CPUAlarmHighThreshold"
-        },
-        "AlarmActions": [
-          {
-            "Ref": "ComponentScaleUpPolicy"
-          }
-        ],
-        "ComparisonOperator": "GreaterThanThreshold",
-        "EvaluationPeriods": {
-          "Ref": "CPUAlarmHighEvalPeriods"
-        },
-        "MetricName": "CPUUtilization",
-        "Namespace": "AWS/EC2",
-        "Statistic": "Average",
-        "Period": {
-          "Ref": "AlarmPeriod"
-        },
-        "Dimensions": [
-          {
-            "Name": "AutoScalingGroupName",
-            "Value": {
-              "Ref": "ComponentAutoScalingGroup"
-            }
-          }
-        ]
-      }
-    },
-    "CPUAlarmLow": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "AlarmDescription": "Scale-down if CPU < 60% for 5 minutes",
-        "Threshold": {
-          "Ref": "CPUAlarmLowThreshold"
-        },
-        "AlarmActions": [
-          {
-            "Ref": "ComponentScaleDownPolicy"
-          }
-        ],
-        "ComparisonOperator": "LessThanThreshold",
-        "EvaluationPeriods": {
-          "Ref": "CPUAlarmLowEvalPeriods"
-        },
-        "MetricName": "CPUUtilization",
-        "Namespace": "AWS/EC2",
-        "Statistic": "Average",
-        "Period": {
-          "Ref": "AlarmPeriod"
-        },
-        "Dimensions": [
-          {
-            "Name": "AutoScalingGroupName",
-            "Value": {
-              "Ref": "ComponentAutoScalingGroup"
-            }
-          }
-        ]
       }
     },
     "ComponentSecurityGroup": {
