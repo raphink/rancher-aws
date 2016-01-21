@@ -338,5 +338,24 @@
         "GroupDescription": "A component security group allowing access to the outside world"
       }
     }
+  },
+  "Outputs": {
+    "ELBURL": {
+      "Value": {
+       "Fn::Join": [
+         "",
+         [
+           "http://",
+           {
+             "Fn::GetAtt": [
+               "ComponentElasticLoadBalancer",
+               "DNSName"
+             ]
+           }
+         ]
+       ]
+     },
+      "Description": "The ELB to point to for scaling services"
+    }
   }
 }
