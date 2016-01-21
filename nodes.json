@@ -223,7 +223,7 @@
         "HealthCheck": {
           "HealthyThreshold": 3,
           "Interval": 15,
-          "Target": "HTTP:80/ping",
+          "Target": "HTTP:80",
           "Timeout": 10,
           "UnhealthyThreshold": 8
         },
