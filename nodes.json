@@ -208,7 +208,8 @@
           {
             "PolicyName": "EnableProxyProtocol",
             "InstancePorts": [
-              "8080"
+              "80",
+              "443"
             ],
             "PolicyType": "ProxyProtocolPolicyType",
             "Attributes": [
@@ -222,7 +223,7 @@
         "HealthCheck": {
           "HealthyThreshold": 3,
           "Interval": 15,
-          "Target": "HTTP:8080/ping",
+          "Target": "HTTP:80/ping",
           "Timeout": 10,
           "UnhealthyThreshold": 8
         },
