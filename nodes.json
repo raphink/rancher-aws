@@ -9,7 +9,7 @@
     "MaxSize": {
       "Type": "String",
       "Description": "The maximum number of instances",
-      "Default": 5
+      "Default": 20
     },
     "InstanceType": {
       "Type": "String",
@@ -19,6 +19,16 @@
     "ImageId": {
       "Type": "String",
       "Default": "ami-f349e780"
+    },
+    "RootSize": {
+      "Default": "8",
+      "Description": "Root EBS size",
+      "Type": "Number"
+    },
+    "RootType": {
+      "Default": "gp2",
+      "Description": "Root EBS type",
+      "Type": "String"
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName"
@@ -49,6 +59,19 @@
     "VpcId": {
       "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-"
+    },
+    "PublicSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Default": "subnet-"
+    },
+    "ELBConnectionDraining": {
+      "Type": "String",
+      "Description": "Connection draining ensures that the load balancer completes serving all in-flight requests made to a registered instance when the instance is deregistered or becomes unhealthy",
+      "Default": 30
+    },
+    "ELBSslARN": {
+      "Description": "SSL certificate full ARN",
+      "Type": "String"
     }
   },
   "Resources": {
@@ -62,6 +85,7 @@
         }
       },
       "Properties": {
+        "VPCZoneIdentifier" : { "Ref" : "PublicSubnets" },
         "Tags": [
           {
             "Value": "rancher",
@@ -77,6 +101,11 @@
             "Value": "rancher-node",
             "PropagateAtLaunch": true,
             "Key": "Component"
+          }
+        ],
+        "LoadBalancerNames": [
+          {
+            "Ref": "ComponentElasticLoadBalancer"
           }
         ],
         "MinSize": {
@@ -96,6 +125,16 @@
     "ComponentLaunchConfiguration": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda",
+            "Ebs": {
+              "DeleteOnTermination": "true",
+              "VolumeSize": { "Ref": "RootSize" },
+              "VolumeType": { "Ref": "RootType" }
+            }
+          }
+        ],
         "KeyName": {
           "Ref": "KeyName"
         },
@@ -161,6 +200,87 @@
         "AdjustmentType": "ChangeInCapacity",
         "Cooldown": 60,
         "ScalingAdjustment": -1
+      }
+    },
+    "ComponentElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "CrossZone": true,
+        "Subnets": {
+          "Ref": "PublicSubnets"
+        },
+        "Listeners": [
+          {
+            "InstancePort": 80,
+            "LoadBalancerPort": 80,
+            "Protocol": "http",
+            "InstanceProtocol": "http"
+          },
+          {
+            "InstancePort": 80,
+            "LoadBalancerPort": 443,
+            "Protocol": "https",
+            "InstanceProtocol": "http",
+            "SSLCertificateId": { "Ref": "ELBSslARN" }
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "LoadBalancerSecurityGroup"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "EnableProxyProtocol",
+            "InstancePorts": [
+              "80",
+              "443"
+            ],
+            "PolicyType": "ProxyProtocolPolicyType",
+            "Attributes": [
+              {
+                "Name": "ProxyProtocol",
+                "Value": "true"
+              }
+            ]
+          }
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": 3,
+          "Interval": 15,
+          "Target": "TCP:80",
+          "Timeout": 10,
+          "UnhealthyThreshold": 8
+        },
+        "ConnectionDrainingPolicy": {
+          "Enabled": true,
+          "Timeout": {
+            "Ref": "ELBConnectionDraining"
+          }
+        }
+      }
+    },
+    "LoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": [
+          {
+            "ToPort": 80,
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "ToPort": 443,
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "An ELB group allowing access only to from the corresponding component"
       }
     },
     "CPUAlarmHigh": {
@@ -236,6 +356,22 @@
             "ToPort": 0,
             "IpProtocol": "-1",
             "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "FromPort": 80,
+            "ToPort": 80,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
+          },
+          {
+            "FromPort": 443,
+            "ToPort": 443,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
           }
         ],
         "VpcId": {
@@ -243,6 +379,25 @@
         },
         "GroupDescription": "A component security group allowing access to the outside world"
       }
+    }
+  },
+  "Outputs": {
+    "ELBURL": {
+      "Value": {
+       "Fn::Join": [
+         "",
+         [
+           "http://",
+           {
+             "Fn::GetAtt": [
+               "ComponentElasticLoadBalancer",
+               "DNSName"
+             ]
+           }
+         ]
+       ]
+     },
+      "Description": "The ELB to point to for scaling services"
     }
   }
 }

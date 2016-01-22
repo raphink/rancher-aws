@@ -101,6 +101,7 @@
         }
       },
       "Properties": {
+        "VPCZoneIdentifier" : { "Ref" : "PublicSubnets" },
         "Tags": [
           {
             "Value": "rancher",
@@ -167,7 +168,7 @@
                 "rancher:\n",
                 "  services:\n",
                 "    rancher-server:\n",
-                "      image: rancher/server\n",
+                "      image: rancher/server:v0.56.0-rc1\n",
                 "      ports:\n",
                 "      - 8080:8080\n",
                 "      restart: always\n",
