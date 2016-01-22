@@ -20,6 +20,16 @@
       "Type": "String",
       "Default": "ami-f349e780"
     },
+    "RootSize": {
+      "Default": "8",
+      "Description": "Root EBS size",
+      "Type": "Number"
+    },
+    "RootType": {
+      "Default": "gp2",
+      "Description": "Root EBS type",
+      "Type": "String"
+    },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
@@ -96,6 +106,16 @@
     "ComponentLaunchConfiguration": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda",
+            "Ebs": {
+              "DeleteOnTermination": "true",
+              "VolumeSize": { "Ref": "RootSize" },
+              "VolumeTye": { "Ref": "RootType" }
+            }
+          }
+        ],
         "KeyName": {
           "Ref": "KeyName"
         },
