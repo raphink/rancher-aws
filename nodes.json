@@ -9,7 +9,7 @@
     "MaxSize": {
       "Type": "String",
       "Description": "The maximum number of instances",
-      "Default": 5
+      "Default": 20
     },
     "InstanceType": {
       "Type": "String",
